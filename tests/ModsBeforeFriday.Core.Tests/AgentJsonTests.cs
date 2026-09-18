@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ModsBeforeFriday.Core.Agent;
 using Xunit;
 
@@ -20,11 +21,16 @@ public sealed class AgentJsonTests
         };
 
         var json = AgentJson.Serialize(request);
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
 
-        Assert.Contains("\"type\":\"Patch\"", json);
-        Assert.Contains("\"agent_parameters\"", json);
-        Assert.Contains("\"manifest_mod\":\"<manifest />\"", json);
-        Assert.Contains("\"downgrade_to\":\"1.39.1\"", json);
+        Assert.Equal("Patch", root.GetProperty("type").GetString());
+        Assert.Equal("1.39.1", root.GetProperty("downgrade_to").GetString());
+        Assert.Equal("<manifest />", root.GetProperty("manifest_mod").GetString());
+
+        var parameters = root.GetProperty("agent_parameters");
+        Assert.Equal("com.beatgames.beatsaber", parameters.GetProperty("game_id").GetString());
+        Assert.False(parameters.GetProperty("ignore_package_id").GetBoolean());
     }
 
     [Fact]

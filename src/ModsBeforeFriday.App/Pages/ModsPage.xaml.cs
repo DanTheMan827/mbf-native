@@ -44,6 +44,14 @@ public sealed partial class ModsPage : Page
         }
     }
 
+    private async void ReportBug_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is CatalogModItemViewModel item)
+        {
+            await ViewModel.OpenReportBugAsync(item);
+        }
+    }
+
     private async void OpenSource_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.Tag is CatalogModItemViewModel item)

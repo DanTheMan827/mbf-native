@@ -53,4 +53,70 @@ public sealed class PresentationModelTests
         Assert.True(update.IsSelected);
         Assert.False(install.IsSelected);
     }
+
+    [Fact]
+    public void InstalledModExposesCatalogUpdateMetadata()
+    {
+        var mod = new ModInfo("example.mod", "Example", "1.0.0", "1.40.0", "Description", true, false);
+        var updateMod = new ModCatalogMod(
+            "example.mod", "Example", "2.0.0", "https://example.invalid/mod.qmod",
+            "https://github.com/example/example", "Author", "https://example.invalid/cover.png", "Scotland2", "Description", false);
+        var item = new InstalledModItemViewModel(mod, new ModCatalogEntry(updateMod, AlreadyInstalled: true, NeedsUpdate: true));
+
+        Assert.True(item.HasUpdate);
+        Assert.Equal("Update available: 2.0.0", item.UpdateText);
+    }
+
+    [Fact]
+    public void CatalogItemOnlyOffersBugReportForGithubSources()
+    {
+        var github = new ModCatalogMod(
+            "github.mod", "GitHub", "1.0.0", "https://example.invalid/mod.qmod",
+            "https://github.com/example/mod", "Author", null, "Scotland2", "Description", false);
+        var other = github with { Id = "other.mod", Source = "https://example.invalid/source" };
+
+        Assert.True(new CatalogModItemViewModel(new ModCatalogEntry(github, false, false)).CanReportBug);
+        Assert.False(new CatalogModItemViewModel(new ModCatalogEntry(other, false, false)).CanReportBug);
+    }
+
+    [Fact]
+    public void AppStateOnlyEnablesModdedNavigationForReadyScotland2Device()
+    {
+        var state = new ModsBeforeFriday.Application.Services.AppState(new ModsBeforeFriday.Application.Services.AppSettings());
+        state.SelectedDevice = new DeviceInfo("serial", "Quest", "Quest 3", DeviceConnectionState.Ready, 12);
+
+        Assert.False(state.IsModdedDeviceConnected);
+
+        state.ModStatus = new ModStatus(
+            new AppInfo(ModLoader.Scotland2, true, "1.40.0", ManifestXml),
+            [],
+            null,
+            InstallStatus.Ready);
+
+        Assert.True(state.IsModdedDeviceConnected);
+        state.Disconnect();
+        Assert.False(state.IsModdedDeviceConnected);
+    }
+
+    [Fact]
+    public async Task AppStateScopesAgentOperationVisibility()
+    {
+        var state = new ModsBeforeFriday.Application.Services.AppState(new ModsBeforeFriday.Application.Services.AppSettings());
+        var entered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var operation = state.RunAgentOperationAsync("Testing agent", async () =>
+        {
+            entered.SetResult(true);
+            await release.Task;
+        });
+
+        await entered.Task;
+        Assert.True(state.IsAgentOperationActive);
+        Assert.Equal("Testing agent", state.AgentOperationTitle);
+
+        release.SetResult(true);
+        await operation;
+        Assert.False(state.IsAgentOperationActive);
+    }
 }

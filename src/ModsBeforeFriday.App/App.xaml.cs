@@ -65,6 +65,12 @@ public partial class App : XamlApplication
             Backend.Dispose();
             _loggerFactory?.Dispose();
         };
+
+        if (MainWindow.Content is FrameworkElement root)
+        {
+            root.RequestedTheme = ElementTheme.Dark;
+        }
+
         MainWindow.Activate();
         MainWindow.NavigateHome();
     }

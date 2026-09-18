@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
@@ -19,6 +19,7 @@
 	<ItemGroup>
 		<!-- WinUI 3 is supplied by the Windows App SDK. Do not reference
          Microsoft.UI.Xaml 2.x here; that package is WinUI 2/UWP. -->
+		<PackageReference Include="Microsoft.Graphics.Win2D" />
 		<PackageReference Include="Microsoft.WindowsAppSDK" />
 		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" />

@@ -70,7 +70,18 @@ public sealed class ModsViewModel : ObservableObject
 
     public bool HasPendingChanges => InstalledMods.Any(item => item.HasPendingChange);
 
-    public async Task InitializeAsync() => await RefreshAsync();
+    public async Task InitializeAsync()
+    {
+        if (!HasModdedDevice() || _state.ModStatus is null)
+        {
+            InstalledMods.Clear();
+            AvailableMods.Clear();
+            StatusText = "Connect a Quest and finish patching Beat Saber first.";
+            return;
+        }
+
+        await RunBusyAsync(LoadCatalogFromCurrentStatusAsync, "Failed to load mods");
+    }
 
     public void NotifyModToggleChanged()
     {
@@ -93,7 +104,9 @@ public sealed class ModsViewModel : ObservableObject
         await RunBusyAsync(async () =>
         {
             StatusText = $"Removing {item.Name}...";
-            _ = await _quest.RemoveModAsync(_state.SelectedDevice, item.Id, _state.AgentProgress);
+            _ = await _state.RunAgentOperationAsync(
+                $"Removing {item.Name}",
+                () => _quest.RemoveModAsync(_state.SelectedDevice, item.Id, _state.AgentProgress));
             await ReloadStatusAndCatalogAsync();
         }, "Failed to remove mod");
     }
@@ -115,6 +128,16 @@ public sealed class ModsViewModel : ObservableObject
         }
     }
 
+    public async Task OpenReportBugAsync(CatalogModItemViewModel item)
+    {
+        if (!item.CanReportBug || !Uri.TryCreate(item.Mod.Source.TrimEnd('/') + "/issues", UriKind.Absolute, out var uri))
+        {
+            return;
+        }
+
+        await _interaction.OpenUriAsync(uri);
+    }
+
     private async Task RefreshAsync()
     {
         if (_state.SelectedDevice is null || _state.ModStatus?.AppInfo is null)
@@ -131,18 +154,48 @@ public sealed class ModsViewModel : ObservableObject
     private async Task ReloadStatusAndCatalogAsync()
     {
         var device = _state.SelectedDevice ?? throw new InvalidOperationException("No Quest is connected.");
-        var status = await _quest.GetModStatusAsync(
-            device,
-            NormalizeOptional(_state.Settings.CoreModOverrideUrl),
-            _state.AgentProgress);
+        var status = await _state.RunAgentOperationAsync(
+            "Refreshing mod status",
+            () => _quest.GetModStatusAsync(
+                device,
+                NormalizeOptional(_state.Settings.CoreModOverrideUrl),
+                _state.AgentProgress));
         _state.ModStatus = status;
+
+        await LoadCatalogAsync(status);
+    }
+
+    private async Task LoadCatalogFromCurrentStatusAsync()
+    {
+        var status = _state.ModStatus ?? throw new InvalidOperationException("No mod status has been loaded.");
+        await LoadCatalogAsync(status);
+    }
+
+    private async Task LoadCatalogAsync(ModStatus status)
+    {
+        IReadOnlyList<ModCatalogEntry> catalog = [];
+        if (status.AppInfo is not null && status.AppInfo.LoaderInstalled == ModLoader.Scotland2)
+        {
+            StatusText = "Loading mod repository...";
+            catalog = await _catalog.GetAvailableModsAsync(status.AppInfo.Version, status.InstalledMods);
+        }
+
+        var updatesById = catalog
+            .Where(entry => entry.NeedsUpdate)
+            .ToDictionary(entry => entry.Mod.Id, StringComparer.Ordinal);
 
         InstalledMods.Clear();
         foreach (var mod in status.InstalledMods
-                     .OrderByDescending(mod => mod.IsCore)
-                     .ThenBy(mod => mod.Name, StringComparer.OrdinalIgnoreCase))
+                     .Select(mod => new
+                     {
+                         Mod = mod,
+                         Update = updatesById.GetValueOrDefault(mod.Id),
+                     })
+                     .OrderByDescending(item => item.Update is not null)
+                     .ThenBy(item => item.Mod.IsCore)
+                     .ThenBy(item => item.Mod.Name, StringComparer.OrdinalIgnoreCase))
         {
-            var item = new InstalledModItemViewModel(mod);
+            var item = new InstalledModItemViewModel(mod.Mod, mod.Update);
             item.PropertyChanged += (_, args) =>
             {
                 if (args.PropertyName == nameof(InstalledModItemViewModel.IsEnabled)) NotifyModToggleChanged();
@@ -151,19 +204,14 @@ public sealed class ModsViewModel : ObservableObject
         }
 
         AvailableMods.Clear();
-        if (status.AppInfo is not null && status.AppInfo.LoaderInstalled == ModLoader.Scotland2)
+        foreach (var entry in catalog)
         {
-            StatusText = "Loading mod repository...";
-            var catalog = await _catalog.GetAvailableModsAsync(status.AppInfo.Version, status.InstalledMods);
-            foreach (var entry in catalog)
+            var item = new CatalogModItemViewModel(entry);
+            item.PropertyChanged += (_, args) =>
             {
-                var item = new CatalogModItemViewModel(entry);
-                item.PropertyChanged += (_, args) =>
-                {
-                    if (args.PropertyName == nameof(CatalogModItemViewModel.IsSelected)) InstallSelectedCommand.NotifyCanExecuteChanged();
-                };
-                AvailableMods.Add(item);
-            }
+                if (args.PropertyName == nameof(CatalogModItemViewModel.IsSelected)) InstallSelectedCommand.NotifyCanExecuteChanged();
+            };
+            AvailableMods.Add(item);
         }
 
         OnPropertyChanged(nameof(HasPendingChanges));
@@ -189,7 +237,9 @@ public sealed class ModsViewModel : ObservableObject
         await RunBusyAsync(async () =>
         {
             StatusText = "Synchronizing mod changes...";
-            var result = await _quest.SetModsEnabledAsync(_state.SelectedDevice, changes, _state.AgentProgress);
+            var result = await _state.RunAgentOperationAsync(
+                "Synchronizing mod changes",
+                () => _quest.SetModsEnabledAsync(_state.SelectedDevice, changes, _state.AgentProgress));
             if (!string.IsNullOrWhiteSpace(result.Failures))
             {
                 await _interaction.ShowMessageAsync("Some mod changes failed", result.Failures);
@@ -226,7 +276,9 @@ public sealed class ModsViewModel : ObservableObject
         }
 
         StatusText = $"Importing {mod.Name} {mod.Version}...";
-        var result = await _quest.ImportUrlAsync(_state.SelectedDevice, new Uri(mod.Download), _state.AgentProgress);
+        var result = await _state.RunAgentOperationAsync(
+            $"Importing {mod.Name}",
+            () => _quest.ImportUrlAsync(_state.SelectedDevice, new Uri(mod.Download), _state.AgentProgress));
         await ProcessImportResultAsync(result);
     }
 
@@ -248,7 +300,9 @@ public sealed class ModsViewModel : ObservableObject
             foreach (var file in files)
             {
                 StatusText = $"Importing {Path.GetFileName(file)}...";
-                var result = await _quest.ImportFileAsync(_state.SelectedDevice, file, _state.AgentProgress);
+                var result = await _state.RunAgentOperationAsync(
+                    $"Importing {Path.GetFileName(file)}",
+                    () => _quest.ImportFileAsync(_state.SelectedDevice, file, _state.AgentProgress));
                 await ProcessImportResultAsync(result);
             }
 
@@ -265,7 +319,9 @@ public sealed class ModsViewModel : ObservableObject
 
         await RunBusyAsync(async () =>
         {
-            var result = await _quest.ImportUrlAsync(_state.SelectedDevice, uri, _state.AgentProgress);
+            var result = await _state.RunAgentOperationAsync(
+                "Importing mod from URL",
+                () => _quest.ImportUrlAsync(_state.SelectedDevice, uri, _state.AgentProgress));
             ImportUrl = string.Empty;
             await ProcessImportResultAsync(result);
             await ReloadStatusAndCatalogAsync();
@@ -303,10 +359,12 @@ public sealed class ModsViewModel : ObservableObject
                 }
 
                 if (_state.SelectedDevice is null) break;
-                var sync = await _quest.SetModsEnabledAsync(
-                    _state.SelectedDevice,
-                    new Dictionary<string, bool> { [imported.ImportedId] = true },
-                    _state.AgentProgress);
+                var sync = await _state.RunAgentOperationAsync(
+                    $"Enabling {importedMod.Name}",
+                    () => _quest.SetModsEnabledAsync(
+                        _state.SelectedDevice,
+                        new Dictionary<string, bool> { [imported.ImportedId] = true },
+                        _state.AgentProgress));
                 if (!string.IsNullOrWhiteSpace(sync.Failures))
                 {
                     await _interaction.ShowMessageAsync("Mod install failed", sync.Failures);

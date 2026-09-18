@@ -28,9 +28,9 @@ public sealed class HomeViewModel : ObservableObject
         _quest = quest;
         _state = state;
         _interaction = interaction;
-        RefreshDevicesCommand = new AsyncCommand(RefreshDevicesAsync);
-        ConnectCommand = new AsyncCommand(ConnectAsync, () => SelectedDevice is not null && !IsBusy);
-        DisconnectCommand = new RelayCommand(Disconnect, () => _state.IsDeviceConnected);
+        RefreshDevicesCommand = new AsyncCommand(RefreshDevicesAsync, () => !IsBusy);
+        ConnectCommand = new AsyncCommand(ConnectAsync, () => SelectedDevice is not null && !_state.IsDeviceConnected && !IsBusy);
+        DisconnectCommand = new RelayCommand(Disconnect, () => _state.IsDeviceConnected && !IsBusy);
         PatchCommand = new AsyncCommand(PatchAsync, () => CanPatch && !IsBusy);
         RepairCommand = new AsyncCommand(RepairAsync, () => CanRepair && !IsBusy);
         UninstallCommand = new AsyncCommand(UninstallAsync, () => CanUninstall && !IsBusy);
@@ -116,11 +116,14 @@ public sealed class HomeViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
+        var connectedBeforeRefresh = _state.SelectedDevice;
         await RefreshDevicesAsync();
-        if (_state.SelectedDevice is not null)
+        if (connectedBeforeRefresh is not null && _state.SelectedDevice is not null)
         {
             SelectedDevice = Devices.FirstOrDefault(device => device.Serial == _state.SelectedDevice.Serial) ?? _state.SelectedDevice;
-            await InspectConnectedDeviceAsync(_state.SelectedDevice);
+            await RunBusyAsync(
+                () => InspectConnectedDeviceAsync(_state.SelectedDevice),
+                "Failed to refresh Quest status");
         }
     }
 
@@ -141,6 +144,7 @@ public sealed class HomeViewModel : ObservableObject
 
     private async Task RefreshDevicesAsync()
     {
+        var autoConnect = false;
         await RunBusyAsync(async () =>
         {
             StatusText = "Looking for ADB devices...";
@@ -148,15 +152,26 @@ public sealed class HomeViewModel : ObservableObject
             Devices.Clear();
             foreach (var device in devices) Devices.Add(device);
 
-            if (SelectedDevice is null && devices.Count == 1)
+            if (_state.SelectedDevice is not null)
+            {
+                SelectedDevice = devices.FirstOrDefault(device => device.Serial == _state.SelectedDevice.Serial)
+                    ?? _state.SelectedDevice;
+            }
+            else if (devices.Count == 1)
             {
                 SelectedDevice = devices[0];
+                autoConnect = true;
             }
 
             StatusText = devices.Count == 0
                 ? "No ADB devices found. Connect your Quest by USB and enable USB debugging."
                 : $"Found {devices.Count} ADB device{(devices.Count == 1 ? string.Empty : "s")}.";
         }, "Unable to query ADB devices");
+
+        if (autoConnect && !_state.IsDeviceConnected)
+        {
+            await ConnectAsync();
+        }
     }
 
     private async Task ConnectAsync()
@@ -195,10 +210,12 @@ public sealed class HomeViewModel : ObservableObject
     private async Task InspectConnectedDeviceAsync(DeviceInfo device)
     {
         StatusText = "Checking Beat Saber installation...";
-        var status = await _quest.GetModStatusAsync(
-            device,
-            NormalizeOptionalUri(_state.Settings.CoreModOverrideUrl),
-            _state.AgentProgress);
+        var status = await _state.RunAgentOperationAsync(
+            "Checking Beat Saber installation",
+            () => _quest.GetModStatusAsync(
+                device,
+                NormalizeOptionalUri(_state.Settings.CoreModOverrideUrl),
+                _state.AgentProgress));
         _state.ModStatus = status;
         _analysis = InstallationAnalyzer.Analyze(status, _state.Settings.DeveloperMode);
         PopulateVersionChoices();
@@ -224,7 +241,9 @@ public sealed class HomeViewModel : ObservableObject
         var status = _state.ModStatus ?? throw new InvalidOperationException("No mod status has been loaded.");
         var sourceXml = downgradeVersion is null
             ? status.AppInfo?.ManifestXml ?? throw new InvalidOperationException("Beat Saber is not installed.")
-            : await _quest.GetDowngradedManifestAsync(device, downgradeVersion, _state.AgentProgress);
+            : await _state.RunAgentOperationAsync(
+                $"Loading Beat Saber {BeatSaberVersionComparer.TrimBuildSuffix(downgradeVersion)} manifest",
+                () => _quest.GetDowngradedManifestAsync(device, downgradeVersion, _state.AgentProgress));
 
         _manifest = new AndroidManifestDocument(sourceXml);
         _manifest.ApplyPatchingDefaults();
@@ -259,16 +278,18 @@ public sealed class HomeViewModel : ObservableObject
             StatusText = "Patching Beat Saber. Keep the Quest connected...";
             var devicePreV51 = string.Equals(_state.SelectedDevice.Model, "Quest", StringComparison.OrdinalIgnoreCase)
                 && _state.SelectedDevice.AndroidVersion is < 11;
-            var result = await _quest.PatchAsync(
-                _state.SelectedDevice,
-                new PatchOptions(
-                    _manifest.ToXml(),
-                    SelectedDowngrade?.Version,
-                    Remodding: false,
-                    AllowNoCoreMods: _state.Settings.DeveloperMode,
-                    DevicePreV51: devicePreV51,
-                    OverrideCoreModUrl: NormalizeOptionalUri(_state.Settings.CoreModOverrideUrl)),
-                progress: _state.AgentProgress);
+            var result = await _state.RunAgentOperationAsync(
+                "Patching Beat Saber",
+                () => _quest.PatchAsync(
+                    _state.SelectedDevice,
+                    new PatchOptions(
+                        _manifest.ToXml(),
+                        SelectedDowngrade?.Version,
+                        Remodding: false,
+                        AllowNoCoreMods: _state.Settings.DeveloperMode,
+                        DevicePreV51: devicePreV51,
+                        OverrideCoreModUrl: NormalizeOptionalUri(_state.Settings.CoreModOverrideUrl)),
+                    progress: _state.AgentProgress));
 
             if (result.DidRemoveDlc)
             {
@@ -291,11 +312,13 @@ public sealed class HomeViewModel : ObservableObject
         await RunBusyAsync(async () =>
         {
             StatusText = "Repairing modloader and core mods...";
-            _ = await _quest.QuickFixAsync(
-                _state.SelectedDevice,
-                wipeExistingMods: false,
-                NormalizeOptionalUri(_state.Settings.CoreModOverrideUrl),
-                _state.AgentProgress);
+            _ = await _state.RunAgentOperationAsync(
+                "Repairing modloader and core mods",
+                () => _quest.QuickFixAsync(
+                    _state.SelectedDevice,
+                    wipeExistingMods: false,
+                    NormalizeOptionalUri(_state.Settings.CoreModOverrideUrl),
+                    _state.AgentProgress));
             await InspectConnectedDeviceAsync(_state.SelectedDevice);
         }, "Failed to repair installation");
     }
@@ -404,6 +427,7 @@ public sealed class HomeViewModel : ObservableObject
 
     private void NotifyCommands()
     {
+        RefreshDevicesCommand.NotifyCanExecuteChanged();
         ConnectCommand.NotifyCanExecuteChanged();
         PatchCommand.NotifyCanExecuteChanged();
         RepairCommand.NotifyCanExecuteChanged();

@@ -4,8 +4,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     NavigationCacheMode="Disabled">
 
-    <ScrollViewer>
-        <Grid MaxWidth="900" HorizontalAlignment="Stretch" Padding="28,24,28,48" RowSpacing="18">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+        <Grid HorizontalAlignment="Stretch">
+            <Grid HorizontalAlignment="Stretch" Padding="32,28,32,48" RowSpacing="18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -42,6 +43,7 @@
                     <TextBlock Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
+            </Grid>
         </Grid>
     </ScrollViewer>
 </Page>

@@ -5,7 +5,8 @@
     xmlns:models="using:ModsBeforeFriday.Core.Models"
     NavigationCacheMode="Disabled">
 
-    <Grid MaxWidth="1120" HorizontalAlignment="Stretch" Padding="28,24,28,32" RowSpacing="18">
+    <Grid HorizontalAlignment="Stretch">
+        <Grid HorizontalAlignment="Stretch" Padding="32,28,32,40" RowSpacing="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -65,5 +66,6 @@
                 </ListView>
             </Grid>
         </Border>
+        </Grid>
     </Grid>
 </Page>

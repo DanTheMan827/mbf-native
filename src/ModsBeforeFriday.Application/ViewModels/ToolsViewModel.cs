@@ -104,11 +104,13 @@ public sealed class ToolsViewModel : ObservableObject
 
         await RunBusyAsync(async () =>
         {
-            _ = await _quest.QuickFixAsync(
-                RequireDevice(),
-                wipeExistingMods: true,
-                NormalizeOptional(_state.Settings.CoreModOverrideUrl),
-                _state.AgentProgress);
+            _ = await _state.RunAgentOperationAsync(
+                "Reinstalling core mods",
+                () => _quest.QuickFixAsync(
+                    RequireDevice(),
+                    wipeExistingMods: true,
+                    NormalizeOptional(_state.Settings.CoreModOverrideUrl),
+                    _state.AgentProgress));
             await ReloadStatusAsync();
             StatusText = "Non-core mods removed and core mods reinstalled.";
         }, "Failed to reinstall core mods");
@@ -116,7 +118,9 @@ public sealed class ToolsViewModel : ObservableObject
 
     private async Task FixPlayerDataAsync() => await RunBusyAsync(async () =>
     {
-        var existed = await _quest.FixPlayerDataAsync(RequireDevice(), _state.AgentProgress);
+        var existed = await _state.RunAgentOperationAsync(
+            "Fixing player data",
+            () => _quest.FixPlayerDataAsync(RequireDevice(), _state.AgentProgress));
         await _interaction.ShowMessageAsync(
             "Player data repair",
             existed ? "PlayerData.dat was backed up and repaired." : "No PlayerData.dat file was found that needed repair.");
@@ -158,17 +162,19 @@ public sealed class ToolsViewModel : ObservableObject
 
         await RunBusyAsync(async () =>
         {
-            var result = await _quest.PatchAsync(
-                RequireDevice(),
-                new PatchOptions(
-                    _manifest.ToXml(),
-                    DowngradeTo: null,
-                    Remodding: true,
-                    AllowNoCoreMods: false,
-                    DevicePreV51: false,
-                    OverrideCoreModUrl: NormalizeOptional(_state.Settings.CoreModOverrideUrl)),
-                _splashScreenPath,
-                _state.AgentProgress);
+            var result = await _state.RunAgentOperationAsync(
+                "Repatching Beat Saber",
+                () => _quest.PatchAsync(
+                    RequireDevice(),
+                    new PatchOptions(
+                        _manifest.ToXml(),
+                        DowngradeTo: null,
+                        Remodding: true,
+                        AllowNoCoreMods: false,
+                        DevicePreV51: false,
+                        OverrideCoreModUrl: NormalizeOptional(_state.Settings.CoreModOverrideUrl)),
+                    _splashScreenPath,
+                    _state.AgentProgress));
             if (result.DidRemoveDlc)
             {
                 await _interaction.ShowMessageAsync("DLC notice", "Restart the headset before redownloading installed DLC in-game.");
@@ -242,10 +248,12 @@ public sealed class ToolsViewModel : ObservableObject
 
     private async Task ReloadStatusAsync()
     {
-        var status = await _quest.GetModStatusAsync(
-            RequireDevice(),
-            NormalizeOptional(_state.Settings.CoreModOverrideUrl),
-            _state.AgentProgress);
+        var status = await _state.RunAgentOperationAsync(
+            "Refreshing Beat Saber status",
+            () => _quest.GetModStatusAsync(
+                RequireDevice(),
+                NormalizeOptional(_state.Settings.CoreModOverrideUrl),
+                _state.AgentProgress));
         _state.ModStatus = status;
         if (status.AppInfo is not null)
         {

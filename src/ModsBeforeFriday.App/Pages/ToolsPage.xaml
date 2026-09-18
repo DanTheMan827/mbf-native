@@ -5,8 +5,9 @@
     xmlns:vm="using:ModsBeforeFriday.Application.ViewModels"
     NavigationCacheMode="Disabled">
 
-    <ScrollViewer>
-        <Grid MaxWidth="1120" HorizontalAlignment="Stretch" Padding="28,24,28,48" RowSpacing="18">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+        <Grid HorizontalAlignment="Stretch">
+            <Grid HorizontalAlignment="Stretch" Padding="32,28,32,48" RowSpacing="18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -72,12 +73,15 @@
                         <TextBlock Text="{x:Bind ViewModel.SplashScreenDisplay, Mode=OneWay}" VerticalAlignment="Center" Opacity="0.72" />
                     </StackPanel>
 
-                    <InfoBar IsOpen="True" Severity="Warning" Title="Advanced operation">
-                        <TextBlock Text="Invalid manifest edits can prevent the APK from installing. Export a copy before manual changes." TextWrapping="Wrap" />
-                    </InfoBar>
+                    <InfoBar IsOpen="True"
+                             IsClosable="False"
+                             Severity="Warning"
+                             Title="Advanced operation"
+                             Message="Invalid manifest edits can prevent the APK from installing. Export a copy before manual changes." />
                     <Button Content="Repatch game" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Left" Command="{x:Bind ViewModel.RepatchCommand}" />
                 </StackPanel>
             </Border>
+            </Grid>
         </Grid>
     </ScrollViewer>
 </Page>

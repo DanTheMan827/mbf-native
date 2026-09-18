@@ -6,6 +6,10 @@ The solution is intentionally split so **WinUI is a replaceable presentation lay
 ModsBeforeFriday.App (WinUI 3)
         |
         v
+ModsBeforeFriday.Application
+   UI-independent state + view models
+        |
+        v
 ModsBeforeFriday.Core  <-----  ModsBeforeFriday.Backend
    contracts/models             MBF orchestration, catalog IO,
    manifest editor              Rust-agent deployment/protocol
@@ -39,9 +43,9 @@ public interface IAdbServerTransport
 }
 ```
 
-`IAdbServerConnection` exposes a duplex `Stream` plus `CompleteWritesAsync`, which allows classic ADB shell sessions to half-close stdin while continuing to read stdout. The first concrete transport is TCP (`TcpAdbServerTransport`), which talks to the normal desktop ADB daemon on port 5037.
+The first concrete transport is TCP (`TcpAdbServerTransport`), which talks to the normal desktop ADB daemon on port 5037. A named-pipe, SSH-forwarded, brokered, remote, or in-memory implementation only needs to satisfy this transport contract. `AdbSmartSocketClient` and every layer above it remain unchanged.
 
-A named-pipe, SSH-forwarded, brokered, remote, or in-memory implementation only needs to satisfy this transport contract. `AdbSmartSocketClient` and every layer above it remain unchanged.
+`IAdbServerConnection` still exposes transport-level write completion for protocols that genuinely require it, but the classic `shell:` abstraction deliberately does **not** expose a close-stdin operation. Half-closing the daemon socket for a legacy shell can truncate subprocess output. MBF-agent requests are newline terminated, so the client writes the JSON line, flushes, and reads until the agent exits.
 
 ### `ModsBeforeFriday.Core`
 
@@ -64,12 +68,16 @@ The website-specific non-UI behavior lives here:
 
 `BackendRuntime.Create(IAdbServerTransport, ...)` is the public composition point for a custom ADB daemon transport. `CreateDefault(...)` selects TCP.
 
+### `ModsBeforeFriday.Application`
+
+Pure .NET application state and view models. It coordinates `IQuestService` and `IModCatalogService`, tracks whether a verified modded device is connected, and exposes the current MBF-agent operation/log stream to presentation code. It has no WinUI dependency.
+
 ### `ModsBeforeFriday.App`
 
-WinUI 3 only: pages, view-models, `ContentDialog`, file pickers, URI launching, custom title bar, adaptive `NavigationView`, and Acrylic. View-models consume `IQuestService` and `IModCatalogService`; they do not execute ADB commands, deserialize Rust JSON, or fetch mod repositories.
+WinUI 3 only: XAML pages, native `ContentDialog`, file pickers, URI launching, custom title bar, adaptive `NavigationView`, Acrylic, image conversion, and the blocking operation overlay. The WinUI project does not execute ADB commands, deserialize Rust JSON, or fetch mod repositories.
 
 ## Dependency rule
 
-A build should fail architectural review if a WinUI type (`Microsoft.UI.*`, `Windows.Storage.Pickers`, etc.) appears in `ModsBeforeFriday.Adb`, `ModsBeforeFriday.Core`, or `ModsBeforeFriday.Backend`.
+A build should fail architectural review if a WinUI type (`Microsoft.UI.*`, `Windows.Storage.Pickers`, etc.) appears in `ModsBeforeFriday.Adb`, `ModsBeforeFriday.Core`, `ModsBeforeFriday.Backend`, or `ModsBeforeFriday.Application`.
 
 Conversely, raw ADB service strings (`host:transport:`, `sync:`, `shell:`), the remote agent path, and `mods.bsquest.xyz` should not appear in the WinUI project.

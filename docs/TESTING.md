@@ -10,7 +10,8 @@ Test projects intentionally have no WinUI dependency:
 
 - `ModsBeforeFriday.Adb.Tests`: smart-socket framing, device parsing, shell service sequencing, sync push framing.
 - `ModsBeforeFriday.Core.Tests`: agent JSON shape, Beat Saber version ordering, SemVer, manifest changes, installation-state analysis.
-- `ModsBeforeFriday.Backend.Tests`: agent deployment hash behavior, log relay, final-response/error handling using a fake ADB client.
+- `ModsBeforeFriday.Application.Tests`: UI-independent presentation state, manifest toggles, mod update metadata, navigation eligibility, and agent-operation lifecycle.
+- `ModsBeforeFriday.Backend.Tests`: agent deployment hash behavior, log relay, final-response/error handling, and mod-catalog cover/update filtering using fakes.
 
 ## Physical-device smoke test
 
@@ -32,6 +33,6 @@ Test projects intentionally have no WinUI dependency:
 When `mbf-agent/src/models/request.rs`, `response.rs`, or `mbf-site/src/Agent.ts` changes upstream:
 
 1. Diff the Rust enum variants and field names against `Core/Agent` DTOs.
-2. Add/adjust JSON fixture tests before changing production code.
+2. Add/adjust JSON fixture tests before changing production code. Assert parsed JSON values/property names rather than relying on a specific legal JSON escape representation.
 3. Fetch the newly deployed agent and commit the resulting `agent.lock.json` in release builds (the binary itself remains ignored).
 4. Run the physical-device smoke test.

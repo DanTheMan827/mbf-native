@@ -1,20 +1,21 @@
 using ModsBeforeFriday.Core.Models;
 
-using ModsBeforeFriday.Application.Services;
-
 namespace ModsBeforeFriday.Application.ViewModels;
 
 public sealed class InstalledModItemViewModel : ObservableObject
 {
     private bool _isEnabled;
 
-    public InstalledModItemViewModel(ModInfo mod)
+    public InstalledModItemViewModel(ModInfo mod, ModCatalogEntry? update = null)
     {
         Mod = mod;
+        Update = update;
         _isEnabled = mod.IsEnabled;
     }
 
     public ModInfo Mod { get; }
+
+    public ModCatalogEntry? Update { get; }
 
     public string Id => Mod.Id;
     public string Name => Mod.Name;
@@ -23,6 +24,8 @@ public sealed class InstalledModItemViewModel : ObservableObject
     public bool IsCore => Mod.IsCore;
     public bool CanRemove => !Mod.IsCore;
     public bool OriginalEnabled => Mod.IsEnabled;
+    public bool HasUpdate => Update?.NeedsUpdate == true;
+    public string UpdateText => HasUpdate ? $"Update available: {Update!.Mod.Version}" : string.Empty;
 
     public bool IsEnabled
     {

@@ -4,10 +4,12 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:ModsBeforeFriday.App.Pages"
     xmlns:vm="using:ModsBeforeFriday.Application.ViewModels"
-    NavigationCacheMode="Disabled">
+    NavigationCacheMode="Disabled"
+    Background="Transparent">
 
-    <ScrollViewer>
-        <Grid MaxWidth="1120" HorizontalAlignment="Stretch" Padding="28,24,28,48" RowSpacing="18">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch" Background="Transparent">
+        <Grid HorizontalAlignment="Stretch" Background="Transparent">
+            <Grid HorizontalAlignment="Stretch" Padding="32,28,32,48" RowSpacing="18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -64,7 +66,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="3" Style="{StaticResource CardStyle}">
+            <Border Grid.Row="3" Style="{StaticResource CardStyle}" Visibility="{x:Bind ViewModel.ShowPatchOptions, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                 <StackPanel Spacing="14">
                     <TextBlock Text="Patch options" FontSize="20" FontWeight="SemiBold" />
                     <TextBlock Text="Choose the target version and Android permissions before patching. These options are generated from the same manifest rules as mbf-site." Style="{StaticResource CaptionStyle}" />
@@ -81,15 +83,18 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <InfoBar IsOpen="True" Severity="Warning" Title="Keep the headset connected">
-                        <TextBlock Text="Patching may take several minutes and should not be interrupted." TextWrapping="Wrap" />
-                    </InfoBar>
+                    <InfoBar IsOpen="True"
+                             IsClosable="False"
+                             Severity="Warning"
+                             Title="Keep the headset connected"
+                             Message="Patching may take several minutes and should not be interrupted." />
                     <Button Content="Mod the app"
                             Style="{StaticResource AccentButtonStyle}"
                             HorizontalAlignment="Left"
                             Command="{x:Bind ViewModel.PatchCommand}" />
                 </StackPanel>
             </Border>
+            </Grid>
         </Grid>
     </ScrollViewer>
 </Page>
