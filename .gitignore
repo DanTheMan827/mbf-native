@@ -1,0 +1,11 @@
+.vs/
+.idea/
+**/bin/
+**/obj/
+TestResults/
+artifacts/
+src/ModsBeforeFriday.App/Assets/PlatformTools/
+src/ModsBeforeFriday.App/Assets/Agent/mbf-agent
+src/ModsBeforeFriday.App/Assets/Agent/mbf-agent.sha1
+*.user
+*.suo

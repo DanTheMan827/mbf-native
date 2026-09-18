@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ModsBeforeFriday.Adb</RootNamespace>
+    <AssemblyName>ModsBeforeFriday.Adb</AssemblyName>
+    <Description>UI-independent ADB server protocol and pluggable transport implementation.</Description>
+  </PropertyGroup>
+</Project>

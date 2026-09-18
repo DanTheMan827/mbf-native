@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+		<TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
+		<RootNamespace>ModsBeforeFriday.App</RootNamespace>
+		<AssemblyName>ModsBeforeFriday</AssemblyName>
+		<UseWinUI>true</UseWinUI>
+		<WindowsPackageType>None</WindowsPackageType>
+		<WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+		<Platforms>x64;ARM64</Platforms>
+		<RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+		<RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+		<RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+		<PublishSingleFile>false</PublishSingleFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- WinUI 3 is supplied by the Windows App SDK. Do not reference
+         Microsoft.UI.Xaml 2.x here; that package is WinUI 2/UWP. -->
+		<PackageReference Include="Microsoft.WindowsAppSDK" />
+		<PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+
+		<ProjectReference Include="../ModsBeforeFriday.Backend/ModsBeforeFriday.Backend.csproj" />
+		<ProjectReference Include="../ModsBeforeFriday.Application/ModsBeforeFriday.Application.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="Assets/PlatformTools/**/*" Condition="Exists('Assets/PlatformTools')">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Update="Assets\Agent\agent.lock.json">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Update="Assets\Agent\mbf-agent">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Update="Assets\Agent\mbf-agent.sha1">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	</ItemGroup>
+</Project>

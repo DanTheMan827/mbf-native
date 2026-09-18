@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ModsBeforeFriday.Backend</RootNamespace>
+    <AssemblyName>ModsBeforeFriday.Backend</AssemblyName>
+    <Description>UI-independent orchestration for Quest ADB access and the MBF Rust agent.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../ModsBeforeFriday.Adb/ModsBeforeFriday.Adb.csproj" />
+    <ProjectReference Include="../ModsBeforeFriday.Core/ModsBeforeFriday.Core.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+</Project>

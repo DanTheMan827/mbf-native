@@ -1,0 +1,83 @@
+<Page
+    x:Class="ModsBeforeFriday.App.Pages.ToolsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:ModsBeforeFriday.Application.ViewModels"
+    NavigationCacheMode="Disabled">
+
+    <ScrollViewer>
+        <Grid MaxWidth="1120" HorizontalAlignment="Stretch" Padding="28,24,28,48" RowSpacing="18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Tools" Style="{StaticResource SectionTitleStyle}" />
+                <TextBlock Text="Maintenance and advanced patch controls." Style="{StaticResource CaptionStyle}" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ProgressRing IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" Width="18" Height="18" />
+                    <TextBlock Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+
+            <Border Grid.Row="1" Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Mod tools" FontSize="20" FontWeight="SemiBold" />
+                    <Grid ColumnSpacing="8" RowSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Button Content="Kill Beat Saber" Command="{x:Bind ViewModel.ForceStopCommand}" HorizontalAlignment="Stretch" />
+                        <Button Grid.Column="1" Content="Restart Beat Saber" Command="{x:Bind ViewModel.RestartCommand}" HorizontalAlignment="Stretch" />
+                        <Button Grid.Column="2" Content="Fix Player Data" Command="{x:Bind ViewModel.FixPlayerDataCommand}" HorizontalAlignment="Stretch" />
+                        <Button Grid.Row="1" Content="Reinstall only core mods" Command="{x:Bind ViewModel.ReinstallCoreModsCommand}" HorizontalAlignment="Stretch" />
+                        <Button Grid.Row="1" Grid.Column="1" Content="Uninstall Beat Saber" Command="{x:Bind ViewModel.UninstallCommand}" HorizontalAlignment="Stretch" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="Permissions / repatch" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock Text="Change Android permissions and optional features, then repatch the existing modded APK." Style="{StaticResource CaptionStyle}" />
+
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.ManifestOptions, Mode=OneWay}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ManifestOptionItemViewModel">
+                                <ToggleSwitch Header="{x:Bind Name}" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" Margin="0,4" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Border Height="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4" />
+                    <TextBlock Text="Advanced manifest" FontWeight="SemiBold" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Export XML" Command="{x:Bind ViewModel.ExportManifestCommand}" />
+                        <Button Content="Import XML" Command="{x:Bind ViewModel.ImportManifestCommand}" />
+                    </StackPanel>
+
+                    <Border Height="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4" />
+                    <TextBlock Text="VR splash screen" FontWeight="SemiBold" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Choose PNG" Command="{x:Bind ViewModel.ChooseSplashCommand}" />
+                        <Button Content="Use default" Command="{x:Bind ViewModel.ClearSplashCommand}" />
+                        <TextBlock Text="{x:Bind ViewModel.SplashScreenDisplay, Mode=OneWay}" VerticalAlignment="Center" Opacity="0.72" />
+                    </StackPanel>
+
+                    <InfoBar IsOpen="True" Severity="Warning" Title="Advanced operation">
+                        <TextBlock Text="Invalid manifest edits can prevent the APK from installing. Export a copy before manual changes." TextWrapping="Wrap" />
+                    </InfoBar>
+                    <Button Content="Repatch game" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Left" Command="{x:Bind ViewModel.RepatchCommand}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</Page>

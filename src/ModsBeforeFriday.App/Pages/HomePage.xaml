@@ -1,0 +1,95 @@
+<Page
+    x:Class="ModsBeforeFriday.App.Pages.HomePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:ModsBeforeFriday.App.Pages"
+    xmlns:vm="using:ModsBeforeFriday.Application.ViewModels"
+    NavigationCacheMode="Disabled">
+
+    <ScrollViewer>
+        <Grid MaxWidth="1120" HorizontalAlignment="Stretch" Padding="28,24,28,48" RowSpacing="18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Quest setup" Style="{StaticResource SectionTitleStyle}" />
+                <TextBlock Text="Connect through the native desktop ADB server, then MBF will deploy the same Rust agent used by the web application." Style="{StaticResource CaptionStyle}" />
+            </StackPanel>
+
+            <Border Grid.Row="1" Style="{StaticResource CardStyle}">
+                <Grid ColumnSpacing="12" RowSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="ADB device" FontSize="18" FontWeight="SemiBold" />
+                    <Button Grid.Column="1" Content="Refresh" Command="{x:Bind ViewModel.RefreshDevicesCommand}" />
+
+                    <ComboBox Grid.Row="1"
+                              Grid.ColumnSpan="2"
+                              Header="Available devices"
+                              PlaceholderText="Select a device"
+                              ItemsSource="{x:Bind ViewModel.Devices, Mode=OneWay}"
+                              SelectedItem="{x:Bind ViewModel.SelectedDevice, Mode=TwoWay}"
+                              DisplayMemberPath="DisplayName"
+                              HorizontalAlignment="Stretch" />
+
+                    <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
+                        <Button Content="Connect" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.ConnectCommand}" />
+                        <Button Content="Disconnect" Command="{x:Bind ViewModel.DisconnectCommand}" />
+                        <ProgressRing IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" Width="20" Height="20" />
+                        <TextBlock Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="{x:Bind ViewModel.AnalysisTitle, Mode=OneWay}" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock Text="{x:Bind ViewModel.AnalysisMessage, Mode=OneWay}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Repair installation" Command="{x:Bind ViewModel.RepairCommand}" />
+                        <Button Content="Uninstall Beat Saber" Command="{x:Bind ViewModel.UninstallCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="3" Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="Patch options" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock Text="Choose the target version and Android permissions before patching. These options are generated from the same manifest rules as mbf-site." Style="{StaticResource CaptionStyle}" />
+                    <ComboBox Header="Target version"
+                              ItemsSource="{x:Bind ViewModel.VersionChoices, Mode=OneWay}"
+                              SelectedItem="{x:Bind ViewModel.SelectedDowngrade, Mode=TwoWay}"
+                              DisplayMemberPath="Label"
+                              SelectionChanged="VersionComboBox_SelectionChanged"
+                              HorizontalAlignment="Stretch" />
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.ManifestOptions, Mode=OneWay}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ManifestOptionItemViewModel">
+                                <ToggleSwitch Header="{x:Bind Name}" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" Margin="0,4" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <InfoBar IsOpen="True" Severity="Warning" Title="Keep the headset connected">
+                        <TextBlock Text="Patching may take several minutes and should not be interrupted." TextWrapping="Wrap" />
+                    </InfoBar>
+                    <Button Content="Mod the app"
+                            Style="{StaticResource AccentButtonStyle}"
+                            HorizontalAlignment="Left"
+                            Command="{x:Bind ViewModel.PatchCommand}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</Page>
